@@ -1,0 +1,14 @@
+Extract the data from this scan and return it as json.
+
+The scan contains five columns describing individuals being taxed in the Dutch city of Utrecht in 1899. Extract the following information and return it as json:
+- volgnummer, the sequential number of the individual in the scan, an integer number at most four digits long. If there are more digits, the first one is probably from the previous page and should be ignored.
+- title, a title such as 'Wed.', 'Dr.', 'Mej', 'jkhr', 'jkvr', 'geb', 'vert', 'p/a', 'cur'. If the scan does not contain a title, leave this empty (null).
+- initials, the initials of the individual.
+- surname, the surname of the individual.
+- maiden name, the full maiden name of the individual, below the husband's name and indicated with 'geb' (for 'geboren'), typically provided if she is a widow.
+- street, the street in Utrecht of the individual, always in the 'woonplaats' column. If a street is omitted because it is the same as the previous row fill in the missing value with the last explicitly stated one.  If the scan does not start with a street to fill in, leave the street empty. Below the name another address may be written if the individual moved. You should ignore this and only provide the original address from the woonplaats column.
+- house_number, the house number of the individual, after the printed 'No.'. This is an integer number, sometimes followed by a letter (a, b), a superscript number, or a superscript text (usually 'bis'). Usually, the house numbers within a street will be increasing.
+- class, the tax class of the individual, in the 'klasse' column', an integer number. This should always be transcribed. In the first row there will be an 'f' next to the class, which should be ignored.
+- tax, the tax amount due for the individual, in the 'Bedrag van den aanslag' column. This is a decimal number, where a vertical printed line is used as the decimal separator. A quote mark can also follow the vertical line instead of the usual two digits, which should be transcribed as two zeroes. A little bit of the next column might be visible, but this should be ignored, only the part in the 'Bedrag van den aanslag' column should be transcribed.
+
+Carefully distinguish between the digits '0' and '8'. The digit '0' is a simple oval with a continuous outline, maybe open at the top if the writer was in a hurry, while '8' consists of two stacked loops, typically crossing the loop.
