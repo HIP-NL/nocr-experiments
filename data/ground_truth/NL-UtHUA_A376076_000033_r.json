@@ -1,0 +1,112 @@
+[
+    {
+        "volgnummer": 1871,
+        "title": null,
+        "initials": "H.G.L.",
+        "surname": "Aders",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "7",
+        "class": 4,
+        "tax": 12.75
+    },
+    {
+        "volgnummer": 1872,
+        "title": null,
+        "initials": "M.",
+        "surname": "Tijdeman",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "7",
+        "class": 5,
+        "tax": 18.0
+    },
+    {
+        "volgnummer": 1873,
+        "title": null,
+        "initials": "W.J.",
+        "surname": "Noteboom",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "9",
+        "class": 12,
+        "tax": 88.5
+    },
+    {
+        "volgnummer": 1874,
+        "title": null,
+        "initials": "J.",
+        "surname": "van der Lip",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "11",
+        "class": 8,
+        "tax": 40.5
+    },
+    {
+        "volgnummer": 1875,
+        "title": null,
+        "initials": "A.",
+        "surname": "van der Lip",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "11",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 1876,
+        "title": null,
+        "initials": "J.C.",
+        "surname": "van der Lip",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "11",
+        "class": 6,
+        "tax": 24.0
+    },
+    {
+        "volgnummer": 1877,
+        "title": null,
+        "initials": "J.J.",
+        "surname": "Koch",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "15",
+        "class": 9,
+        "tax": 49.5
+    },
+    {
+        "volgnummer": 1878,
+        "title": null,
+        "initials": "C.F.H.",
+        "surname": "Klokke",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "17",
+        "class": 13,
+        "tax": 106.5
+    },
+    {
+        "volgnummer": 1879,
+        "title": "Wed.",
+        "initials": "S.",
+        "surname": "Deketh",
+        "maiden_name": "P.F.C. Vreede",
+        "street": "Oudkerkhof",
+        "house_number": "17 bis",
+        "class": 3,
+        "tax": 8.25
+    },
+    {
+        "volgnummer": 1880,
+        "title": null,
+        "initials": "A.N.",
+        "surname": "Lentz",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "19",
+        "class": 9,
+        "tax": 49.5
+    }
+]

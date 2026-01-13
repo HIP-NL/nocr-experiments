@@ -1,0 +1,112 @@
+[
+    {
+        "volgnummer": 1861,
+        "title": null,
+        "initials": "G.",
+        "surname": "Fukkink",
+        "maiden_name": null,
+        "street": "Oudekamp",
+        "house_number": "10",
+        "class": 2,
+        "tax": 4.5
+    },
+    {
+        "volgnummer": 1862,
+        "title": null,
+        "initials": "C.B.",
+        "surname": "Beijerman",
+        "maiden_name": null,
+        "street": "Oudekamp",
+        "house_number": "12",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 1863,
+        "title": null,
+        "initials": "J.",
+        "surname": "van Zijtveld",
+        "maiden_name": null,
+        "street": "Oudekamp",
+        "house_number": "16",
+        "class": 2,
+        "tax": 4.5
+    },
+    {
+        "volgnummer": 1864,
+        "title": null,
+        "initials": "J.C.E.",
+        "surname": "Proetskie",
+        "maiden_name": null,
+        "street": "Oudekamp",
+        "house_number": "16",
+        "class": 1,
+        "tax": 1.5
+    },
+    {
+        "volgnummer": 1865,
+        "title": null,
+        "initials": "G.",
+        "surname": "van Baak",
+        "maiden_name": null,
+        "street": "Oudekamp",
+        "house_number": "18",
+        "class": 9,
+        "tax": 49.5
+    },
+    {
+        "volgnummer": 1866,
+        "title": null,
+        "initials": "J.H.",
+        "surname": "Knobbout",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "3",
+        "class": 1,
+        "tax": 1.5
+    },
+    {
+        "volgnummer": 1867,
+        "title": null,
+        "initials": "F.",
+        "surname": "van der Pijl",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "3 bis",
+        "class": 2,
+        "tax": 4.5
+    },
+    {
+        "volgnummer": 1868,
+        "title": null,
+        "initials": "O.J.",
+        "surname": "Verkerk",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "5",
+        "class": 5,
+        "tax": 18.0
+    },
+    {
+        "volgnummer": 1869,
+        "title": null,
+        "initials": "A.W.",
+        "surname": "Helfferich",
+        "maiden_name": null,
+        "street": "Oudkerkhof",
+        "house_number": "5",
+        "class": 1,
+        "tax": 1.5
+    },
+    {
+        "volgnummer": 1870,
+        "title": "Wed.",
+        "initials": "H.Th.E.",
+        "surname": "Kuijper",
+        "maiden_name": "J.M. Leuven",
+        "street": "Oudkerkhof",
+        "house_number": "5",
+        "class": 1,
+        "tax": 1.5
+    }
+]

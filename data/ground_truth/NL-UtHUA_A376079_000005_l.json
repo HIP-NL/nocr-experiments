@@ -1,0 +1,112 @@
+[
+    {
+        "volgnummer": 741,
+        "title": null,
+        "initials": "J.D.",
+        "surname": "van Kuijk",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "6",
+        "class": 14,
+        "tax": 127.5
+    },
+    {
+        "volgnummer": 742,
+        "title": null,
+        "initials": "G.J.G.W.",
+        "surname": "Maas",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "8",
+        "class": 6,
+        "tax": 24.0
+    },
+    {
+        "volgnummer": 743,
+        "title": null,
+        "initials": "J.L.",
+        "surname": "Lestrade",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "10",
+        "class": 8,
+        "tax": 40.5
+    },
+    {
+        "volgnummer": 744,
+        "title": "Wed.",
+        "initials": "C.A.",
+        "surname": "Hoijng",
+        "maiden_name": "C. B. Niermann",
+        "street": "Oudegracht wz",
+        "house_number": "12",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 745,
+        "title": null,
+        "initials": "R.W.C.",
+        "surname": "Hoijng",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "12",
+        "class": 5,
+        "tax": 18.0
+    },
+    {
+        "volgnummer": 746,
+        "title": "Mej",
+        "initials": "B.H.L.",
+        "surname": "Hoijng",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "12",
+        "class": 4,
+        "tax": 12.75
+    },
+    {
+        "volgnummer": 747,
+        "title": null,
+        "initials": "H.F.",
+        "surname": "Hoijng",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "12",
+        "class": 4,
+        "tax": 12.75
+    },
+    {
+        "volgnummer": 748,
+        "title": "Mej",
+        "initials": "F.M.",
+        "surname": "Hoijng",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "12",
+        "class": 4,
+        "tax": 12.75
+    },
+    {
+        "volgnummer": 749,
+        "title": "Wed",
+        "initials": "J.",
+        "surname": "van Dam",
+        "maiden_name": "J. L. de Goeij",
+        "street": "Oudegracht wz",
+        "house_number": "14",
+        "class": 3,
+        "tax": 8.25
+    },
+    {
+        "volgnummer": 750,
+        "title": null,
+        "initials": "G.F.",
+        "surname": "Bieruma Oosting",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "14",
+        "class": 9,
+        "tax": 49.5
+    }
+]

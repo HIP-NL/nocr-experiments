@@ -1,0 +1,112 @@
+[
+    {
+        "volgnummer": 751,
+        "title": "Wed",
+        "initials": "P.J.",
+        "surname": "Frenaij",
+        "maiden_name": "R.P. Burgers",
+        "street": "Oudegracht wz",
+        "house_number": "18",
+        "class": 1,
+        "tax": 1.5
+    },
+    {
+        "volgnummer": 752,
+        "title": null,
+        "initials": "J.P.",
+        "surname": "Frenaij Burgers",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "18",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 753,
+        "title": null,
+        "initials": "G.B.Th.",
+        "surname": "Bastiaanse",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "20",
+        "class": 8,
+        "tax": 40.5
+    },
+    {
+        "volgnummer": 754,
+        "title": "Mej",
+        "initials": "J.M.",
+        "surname": "Jongbloed",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "22",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 755,
+        "title": null,
+        "initials": "A.",
+        "surname": "Welling",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "24",
+        "class": 19,
+        "tax": 294.0
+    },
+    {
+        "volgnummer": 756,
+        "title": null,
+        "initials": "G.C.",
+        "surname": "van Dijk",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "26",
+        "class": 14,
+        "tax": 127.5
+    },
+    {
+        "volgnummer": 757,
+        "title": null,
+        "initials": "J.",
+        "surname": "Brenninkmeijer",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "28",
+        "class": 10,
+        "tax": 60.0
+    },
+    {
+        "volgnummer": 758,
+        "title": "Mej",
+        "initials": "A.H.M.",
+        "surname": "Goosselink",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "28",
+        "class": 2,
+        "tax": 4.5
+    },
+    {
+        "volgnummer": 759,
+        "title": null,
+        "initials": "F.W.",
+        "surname": "Haanebrink",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "30",
+        "class": 10,
+        "tax": 249.0
+    },
+    {
+        "volgnummer": 760,
+        "title": null,
+        "initials": "F.C.A.M.",
+        "surname": "Theissing",
+        "maiden_name": null,
+        "street": "Oudegracht wz",
+        "house_number": "32",
+        "class": 21,
+        "tax": 402.0
+    }
+]
