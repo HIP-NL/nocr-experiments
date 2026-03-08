@@ -34,20 +34,22 @@ model_order <- c(
     "gemini-2.0-flash",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
-    "gemini-3-flash-preview"
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview"
 )
 
 short_models <- c(
-    "gemini-2.0-flash-lite"    = "2-fl",
-    "gemini-2.0-flash"         = "2-f",
-    "gemini-2.5-flash-lite"    = "2.5-fl",
-    "gemini-2.5-flash"         = "2.5-f",
-    "gemini-3-flash-preview"   = "3-f"
+    "gemini-2.0-flash-lite"           = "2-fl",
+    "gemini-2.0-flash"                = "2-f",
+    "gemini-2.5-flash-lite"           = "2.5-fl",
+    "gemini-2.5-flash"                = "2.5-f",
+    "gemini-3-flash-preview"          = "3-f",
+    "gemini-3.1-flash-lite-preview"   = "3-fl"
 )
 
 # Import predictions
 print("Loading predictions...")
-pred_files = list.files("./results/predictions", pattern = "\\.json$", full.names = TRUE)
+pred_files <- list.files("./results/predictions", pattern = "\\.json$", full.names = TRUE)
 names(pred_files) <- basename(pred_files)
 
 preds <- lapply(pred_files, fromJSON)
@@ -182,7 +184,7 @@ plt(error_rate ~ model_order | strategy + thinking,
     legend = "top!",
     type = "b", pch = 20,
     xaxl = function(x) short_models,
-    xaxb = 1:5,
+    xaxb = 1:length(short_models),
     ylab = "Error Rate",
     xlab = "Model",
     main = "Error Rates by Model, Strategy, and Thinking Budget"
@@ -199,6 +201,7 @@ meta[, input_tokens := prompt_token_count]
 meta[
     ,
     cost := fcase(
+        model == "gemini-3.1-flash-lite-preview", output_tokens * 1.50 + input_tokens * 0.25,
         model == "gemini-3-flash-preview", output_tokens * 3.0 + input_tokens * 0.50,
         model == "gemini-2.5-flash", output_tokens * 2.5 + input_tokens * 0.30,
         model == "gemini-2.5-flash-lite", output_tokens * 0.4 + input_tokens * 0.10,
@@ -236,7 +239,7 @@ setorder(smry_long, model, cost)
 print("\nGenerating plot: error rates by cost...")
 pdf(file = "./evaluation/figures/error_rates_by_cost_and_model.pdf", height = 6, width = 10)
 mypar()
-plt(error_rate ~ cost | model,
+plt(error_rate ~ cost | short_model,
     facet = ~error_type,
     data = smry_long,
     legend = "top!",

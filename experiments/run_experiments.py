@@ -33,9 +33,7 @@ BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 RESULTS_DIR = BASE_DIR / "results"
 PREDICTIONS_DIR = RESULTS_DIR / "predictions_test"
-PREDICTIONS_DIR = RESULTS_DIR / "predictions_test2"
 METADATA_DIR = RESULTS_DIR / "metadata"
-METADATA_DIR = RESULTS_DIR / "metadata2"
 
 # Ensure output directories exist
 PREDICTIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -56,9 +54,10 @@ IMAGE_FILES = [
 MODELS = [
     # "models/gemini-2.0-flash-lite",
     # "models/gemini-2.0-flash",
-    "models/gemini-2.5-flash-lite",
+    # "models/gemini-2.5-flash-lite",
     # "models/gemini-2.5-flash",
     # "models/gemini-3.0-flash-preview",
+    "gemini-3.1-flash-lite-preview",
 ]
 
 # Thinking budgets to test
