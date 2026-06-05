@@ -44,7 +44,7 @@ short_models <- c(
     "gemini-2.5-flash-lite"           = "2.5-fl",
     "gemini-2.5-flash"                = "2.5-f",
     "gemini-3-flash-preview"          = "3-f",
-    "gemini-3.1-flash-lite-preview"   = "3-fl"
+    "gemini-3.1-flash-lite-preview"   = "3.1-fl"
 )
 
 # Import predictions
@@ -56,6 +56,8 @@ preds <- lapply(pred_files, fromJSON)
 preds <- lapply(preds, as.data.table)
 preds <- lapply(preds, setnames, "maiden name", "maiden_name", skip_absent = TRUE)
 preds <- rbindlist(preds, idcol = "file")
+
+print(dim(preds))
 
 # Import ground truth
 print("Loading ground truth...")
@@ -145,7 +147,6 @@ eval[, cell_errors := (volgnummer_pred != volgnummer_gt) +
     (tax_pred != tax_gt)]
 
 # Summarize by model, strategy, and thinking budget
-print("Summarizing results...")
 smry <- eval[, list(
     cer = mean(char_errors / nchar_row),
     cell_error_rate = mean(cell_errors / 9),
@@ -154,13 +155,29 @@ smry <- eval[, list(
 
 # Overall model performance
 print("\nOverall model performance (averaged across strategies):")
-print(smry[, list(cer = mean(cer), cell_error_rate = mean(cell_error_rate)),
-    by = model
-][order(cer)])
+out = smry[, list(cer = mean(cer), cell_error_rate = mean(cell_error_rate)), by = model]
+
+knitr::kable(out[order(cer)], digits = 3)
+
+writeLines(
+    knitr::kable(out[order(cer)], format = "latex", digits = 3),
+    con = "./evaluation/tables/performance_by_strategy.tex"
+)
 
 # Top 5 configurations
 print("\nTop 5 configurations:")
-print(smry[order(cer)][1:5, list(model, strategy, thinking, cer, cell_error_rate)])
+knitr::kable(smry[order(cer)][1:5, list(model, strategy, thinking, cer, cell_error_rate)], digits = 3)
+
+writeLines(
+    knitr::kable(
+        smry[order(cer)][1:5, list(model, strategy, thinking, cer, cell_error_rate)],
+        format = "latex",
+        caption = "Top 5 models and strategies by error rate.",
+        label = "top5cer",
+        digits = 3
+    ),
+    con = "./evaluation/tables/top5_cer.tex"
+)
 
 # Reshape for plotting
 smry_long <- melt(
@@ -175,7 +192,6 @@ smry_long <- smry_long[order(model_order)]
 smry_long[, short_model := short_models[model]]
 
 # Plot: Error rates by strategy and thinking
-print("\nGenerating plot: error rates by strategy...")
 pdf(file = "./evaluation/figures/error_rates_by_strategy.pdf", height = 6, width = 10)
 mypar()
 plt(error_rate ~ model_order | strategy + thinking,
@@ -187,20 +203,17 @@ plt(error_rate ~ model_order | strategy + thinking,
     xaxb = 1:length(short_models),
     ylab = "Error Rate",
     xlab = "Model",
-    main = "Error Rates by Model, Strategy, and Thinking Budget"
+    main = NA
 )
 dev.off()
 
 # Add cost calculations
-print("Calculating costs...")
 meta[is.na(thoughts_token_count), thoughts_token_count := 0]
 meta[, output_tokens := candidates_token_count + thoughts_token_count]
 meta[, input_tokens := prompt_token_count]
 
 # Cost per million tokens (as of pricing date)
-meta[
-    ,
-    cost := fcase(
+meta[, cost := fcase(
         model == "gemini-3.1-flash-lite-preview", output_tokens * 1.50 + input_tokens * 0.25,
         model == "gemini-3-flash-preview", output_tokens * 3.0 + input_tokens * 0.50,
         model == "gemini-2.5-flash", output_tokens * 2.5 + input_tokens * 0.30,
@@ -227,26 +240,47 @@ smry_long <- merge(
 )
 
 # Cost-accuracy frontier
-print("\nCost-accuracy trade-offs:")
-print(smry_long[
-    error_type == "cer",
-    list(cost, model, strategy, thinking, error_rate)
-][order(cost)])
+out = smry_long[error_type == "cer", list(cost, model, strategy, thinking, error_rate)][order(cost)]
+writeLines(
+    knitr::kable(
+        out[error_rate < 0.1],
+        format = "latex",
+        caption = "Model cost and performance for models with with at least ten percent CER, ordered by costs",
+        label = "costs",
+        digits = 3
+    ),
+    con = "./evaluation/tables/cost_accuracy_tradeoffs.tex"
+)
 
-setorder(smry_long, model, cost)
+knitr::kable(out)
+
+setorder(smry_long, model, -cost)
 
 # Plot: Error rates by cost
-print("\nGenerating plot: error rates by cost...")
 pdf(file = "./evaluation/figures/error_rates_by_cost_and_model.pdf", height = 6, width = 10)
 mypar()
 plt(error_rate ~ cost | short_model,
-    facet = ~error_type,
+    facet = ~ error_type,
     data = smry_long,
     legend = "top!",
-    type = "b", pch = 20,
+    type = "b",
+    pch = 19,
     xlab = "Cost (USD)",
     ylab = "Error Rate",
-    main = "Error Rates by Cost and Model"
+    main = NA
+)
+dev.off()
+
+pdf(file = "./evaluation/figures/error_rates_by_cost_and_strategyl.pdf", height = 6, width = 10)
+mypar()
+plt(error_rate ~ cost | strategy,
+    facet = ~ error_type,
+    data = smry_long,
+    legend = "top!",
+    type = "p", pch = 20,
+    xlab = "Cost (USD)",
+    ylab = "Error Rate",
+    main = NA
 )
 dev.off()
 
