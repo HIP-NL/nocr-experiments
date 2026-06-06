@@ -1,6 +1,6 @@
-Extract the data from this scan and return it as json.
+Extract the data from this scan and return it as {output_format}.
 
-The scan contains five columns describing individuals being taxed in the Dutch city of Utrecht in 1899. Extract the following information and return it as json:
+The scan contains five columns describing individuals being taxed in the Dutch city of Utrecht in 1899. Extract the following information and return it as {output_format}:
 - volgnummer, the sequential number of the individual in the scan, an integer number at most four digits long. If there are more digits, the first one is probably from the previous page and should be ignored.
 - title, a title such as 'Wed.', 'Dr.', 'Mej', 'jkhr', 'jkvr', 'geb', 'vert', 'p/a', 'cur'. If the scan does not contain a title, leave this empty (null).
 - initials, the initials of the individual.

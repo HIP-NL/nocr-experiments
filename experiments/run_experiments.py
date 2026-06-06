@@ -39,6 +39,9 @@ METADATA_DIR = RESULTS_DIR / "metadata"
 PREDICTIONS_DIR.mkdir(parents=True, exist_ok=True)
 METADATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Output format
+FORMAT = "JSON"
+
 # Initialize Gemini client
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -160,7 +163,8 @@ def run_experiment(model_name, messages, image_name, strategy, thinking_budget):
 
 # Load prompt
 prompt_text = load_prompt()
-prompt_part = Part(text=prompt_text)
+prompt_formatted = prompt_text.format(output_format=FORMAT)
+prompt_part = Part(text=prompt_formatted)
 
 # Upload all images
 print("\nUploading images...")
