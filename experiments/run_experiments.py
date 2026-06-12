@@ -39,8 +39,12 @@ METADATA_DIR = RESULTS_DIR / "metadata"
 PREDICTIONS_DIR.mkdir(parents=True, exist_ok=True)
 METADATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# Output format
-FORMAT = "JSON"
+# Output formats to test
+FORMATS = {
+    # "json": "JSON",
+    "yaml": "YAML",
+    "md": "a markdown table",
+}
 
 # Initialize Gemini client
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
@@ -58,7 +62,7 @@ MODELS = [
     # "models/gemini-2.0-flash-lite",
     # "models/gemini-2.0-flash",
     # "models/gemini-2.5-flash-lite",
-    # "models/gemini-2.5-flash",
+    "models/gemini-2.5-flash",
     # "models/gemini-3.0-flash-preview",
     "gemini-3.1-flash-lite-preview",
 ]
@@ -96,18 +100,27 @@ def get_model_short_name(model_name):
     return model_name.replace("models/", "").replace(":", "-")
 
 
-def build_output_filename(image_name, model_name, strategy, thinking_budget, suffix=""):
+def build_output_filename(
+    image_name, model_name, strategy, thinking_budget, suffix="", ext="json"
+):
     """Build standardized output filename."""
     image_base = image_name.replace(".jpg", "")
     model_short = get_model_short_name(model_name)
     thinking_str = f"thinking{thinking_budget}"
 
     parts = [image_base, model_short, strategy, thinking_str]
-    filename = "__".join(parts) + suffix + ".json"
+    filename = "__".join(parts) + suffix + "." + ext
     return filename
 
 
-def run_experiment(model_name, messages, image_name, strategy, thinking_budget):
+def run_experiment(
+    model_name,
+    messages,
+    image_name,
+    strategy,
+    thinking_budget,
+    output_format="json",
+):
     """Run a single experiment and save results."""
     try:
         print(f"  Running {strategy} (thinking={thinking_budget}) on {image_name}...")
@@ -118,13 +131,16 @@ def run_experiment(model_name, messages, image_name, strategy, thinking_budget):
             thinking_config = types.ThinkingConfig(thinking_budget=thinking_budget)
 
         # Generate content
+        config_kwargs = {
+            "temperature": 0.9,
+            "thinking_config": thinking_config,
+        }
+        if output_format == "json":
+            config_kwargs["response_mime_type"] = "application/json"
+
         response = client.models.generate_content(
             model=model_name,
-            config=GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.9,
-                thinking_config=thinking_config,
-            ),
+            config=GenerateContentConfig(**config_kwargs),
             contents=messages,
         )
 
@@ -138,17 +154,27 @@ def run_experiment(model_name, messages, image_name, strategy, thinking_budget):
 
         # Save prediction
         if response.text:
-            response_json = json.loads(response.text)
-
             pred_filename = build_output_filename(
-                image_name, model_name, strategy, thinking_budget
+                image_name,
+                model_name,
+                strategy,
+                thinking_budget,
+                ext=output_format,
             )
             meta_filename = build_output_filename(
-                image_name, model_name, strategy, thinking_budget
+                image_name,
+                model_name,
+                strategy,
+                thinking_budget,
+                suffix=f"__{output_format}",
+                ext="json",
             )
 
             with open(PREDICTIONS_DIR / pred_filename, "w") as f:
-                json.dump(response_json, f, indent=4)
+                if output_format == "json":
+                    json.dump(json.loads(response.text), f, indent=4)
+                else:
+                    f.write(response.text)
 
             with open(METADATA_DIR / meta_filename, "w") as f:
                 json.dump(metadata, f, indent=4)
@@ -161,11 +187,6 @@ def run_experiment(model_name, messages, image_name, strategy, thinking_budget):
         print(f"  ✗ Error: {e}")
 
 
-# Load prompt
-prompt_text = load_prompt()
-prompt_formatted = prompt_text.format(output_format=FORMAT)
-prompt_part = Part(text=prompt_formatted)
-
 # Upload all images
 print("\nUploading images...")
 image_parts = {}
@@ -176,63 +197,76 @@ for image_file in IMAGE_FILES:
 # Generate all combinations: 3 images as examples, 1 as target
 combinations = list(itertools.combinations(range(len(IMAGE_FILES)), 3))
 
+# Load prompt
+prompt_text = load_prompt()
+
 # Main experiment loop.
-for model_name in MODELS:
-    print(f"\n{'=' * 70}")
-    print(f"Model: {model_name}")
-    print(f"{'=' * 70}")
+for output_format, format_label in FORMATS.items():
+    # Insert format into prompt
+    print(f"format: {format_label}")
+    prompt_formatted = prompt_text.format(output_format=format_label)
+    prompt_part = Part(text=prompt_formatted)
 
-    for combination in combinations:
-        example_indices = combination
-        target_index = list(set(range(len(IMAGE_FILES))) - set(example_indices))[0]
-        target_image = IMAGE_FILES[target_index]
+    for model_name in MODELS:
+        print(f"\n{'=' * 70}")
+        print(f"Model: {model_name}")
+        print(f"{'=' * 70}")
 
-        print(f"\nTarget: {target_image}")
+        for combination in combinations:
+            example_indices = combination
+            target_index = list(set(range(len(IMAGE_FILES))) - set(example_indices))[0]
+            target_image = IMAGE_FILES[target_index]
 
-        for thinking_budget in THINKING_BUDGETS:
-            # Few-shot experiment
-            messages_fewshot = []
-            for idx in example_indices:
-                example_image = IMAGE_FILES[idx]
-                gt_response = load_ground_truth(example_image)
-                gt_part = Part(text=json.dumps(gt_response, indent=4))
+            print(f"\nTarget: {target_image}")
 
-                messages_fewshot.extend(
-                    [
-                        Content(
-                            role="user",
-                            parts=[image_parts[example_image], prompt_part],
-                        ),
-                        Content(role="model", parts=[gt_part]),
-                    ]
+            for thinking_budget in THINKING_BUDGETS:
+                # Few-shot experiment
+                messages_fewshot = []
+                for idx in example_indices:
+                    example_image = IMAGE_FILES[idx]
+                    gt_response = load_ground_truth(example_image)
+                    gt_part = Part(text=json.dumps(gt_response, indent=4))
+
+                    messages_fewshot.extend(
+                        [
+                            Content(
+                                role="user",
+                                parts=[image_parts[example_image], prompt_part],
+                            ),
+                            Content(role="model", parts=[gt_part]),
+                        ]
+                    )
+
+                messages_fewshot.append(
+                    Content(role="user", parts=[image_parts[target_image], prompt_part])
                 )
 
-            messages_fewshot.append(
-                Content(role="user", parts=[image_parts[target_image], prompt_part])
-            )
+                # run few show only if json because examples are all json
+                if output_format == "json":
+                    run_experiment(
+                        model_name,
+                        messages_fewshot,
+                        target_image,
+                        "fewshot",
+                        thinking_budget,
+                        output_format=output_format,
+                    )
 
-            run_experiment(
-                model_name,
-                messages_fewshot,
-                target_image,
-                "fewshot",
-                thinking_budget,
-            )
+                # Zero-shot experiment
+                messages_zeroshot = [
+                    Content(role="user", parts=[image_parts[target_image], prompt_part])
+                ]
 
-            # Zero-shot experiment
-            messages_zeroshot = [
-                Content(role="user", parts=[image_parts[target_image], prompt_part])
-            ]
+                run_experiment(
+                    model_name,
+                    messages_zeroshot,
+                    target_image,
+                    "zeroshot",
+                    thinking_budget,
+                    output_format=output_format,
+                )
 
-            run_experiment(
-                model_name,
-                messages_zeroshot,
-                target_image,
-                "zeroshot",
-                thinking_budget,
-            )
-
-            # time.sleep(2)  # Rate limiting, uncomment if needed
+                # time.sleep(2)  # Rate limiting, uncomment if needed
 
 print("\n" + "=" * 70)
 print("Experiments complete!")

@@ -146,6 +146,9 @@ eval[, cell_errors := (volgnummer_pred != volgnummer_gt) +
     (class_pred != class_gt) +
     (tax_pred != tax_gt)]
 
+eval_format = eval[md == "json"]
+eval = eval[md == "json"]
+
 # Summarize by model, strategy, and thinking budget
 smry <- eval[, list(
     cer = mean(char_errors / nchar_row),
