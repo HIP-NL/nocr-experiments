@@ -15,8 +15,6 @@ library("jsonlite")
 library("stringdist")
 library("tinyplot")
 
-# Set working directory to script location
-
 # Helper function for nice plots
 mypar <- function(...) {
     par(...,
@@ -48,7 +46,6 @@ short_models <- c(
 )
 
 # Import predictions
-print("Loading predictions...")
 pred_files <- list.files("./results/predictions", pattern = "\\.json$", full.names = TRUE)
 names(pred_files) <- basename(pred_files)
 
@@ -57,10 +54,11 @@ preds <- lapply(preds, as.data.table)
 preds <- lapply(preds, setnames, "maiden name", "maiden_name", skip_absent = TRUE)
 preds <- rbindlist(preds, idcol = "file")
 
-print(dim(preds))
+
+# Import predictions along format
+preds_format = fread("./results/predictions_format/processed_predictions_format.csv")
 
 # Import ground truth
-print("Loading ground truth...")
 gt_files <- list.files("./data/ground_truth", pattern = "\\.json$", full.names = TRUE)
 names(gt_files) <- basename(gt_files)
 
@@ -68,22 +66,25 @@ gt <- lapply(gt_files, fromJSON)
 gt <- rbindlist(gt, idcol = "file")
 
 # Import metadata
-print("Loading metadata...")
 meta_files <- list.files("./results/metadata", pattern = "\\.json$", full.names = TRUE)
 names(meta_files) <- basename(meta_files)
 
 meta <- lapply(meta_files, fromJSON)
 meta <- rbindlist(meta, idcol = "file", fill = TRUE)
 
+names(preds) == names(preds_format)
+preds = rbind(preds, preds_format)
+
 # Parse prediction filenames (new format: {image}__{model}__{strategy}__{thinking}.json)
-print("Parsing prediction metadata...")
 preds[, image := stringi::stri_extract_first_regex(file, "NL-UtHUA_[A-Z0-9_]+")]
 preds[, model := stringi::stri_extract_first_regex(file, "gemini-[^_]+")]
 preds[, strategy := stringi::stri_extract_first_regex(file, "(zeroshot|fewshot)")]
 preds[, thinking := stringi::stri_extract_first_regex(file, "thinking\\d+")]
+preds[, format := stringi::stri_extract_first_regex(file, "(yaml|md)")]
+preds[is.na(format), format := "json"]
 
 # Add row numbers for proper alignment
-preds[, row := 1:.N, by = list(model, strategy, thinking, image)]
+preds[, row := 1:.N, by = list(model, strategy, thinking, image, format)]
 
 # Parse metadata filenames
 print("Parsing metadata...")
@@ -92,22 +93,57 @@ meta[, model := stringi::stri_extract_first_regex(file, "gemini-[^_]+")]
 meta[, strategy := stringi::stri_extract_first_regex(file, "(zeroshot|fewshot)")]
 meta[, thinking := stringi::stri_extract_first_regex(file, "thinking\\d+")]
 
+# extra formats from yaml/md
+meta[, format := stringi::stri_extract_first_regex(file, "(yaml|md)")]
+meta[is.na(format), format := "json"]
+
+# Add cost calculations
+meta[is.na(thoughts_token_count), thoughts_token_count := 0]
+meta[, output_tokens := candidates_token_count + thoughts_token_count]
+meta[, input_tokens := prompt_token_count]
+
+# Cost per million tokens (as of pricing date)
+meta[, cost := fcase(
+        model == "gemini-3.1-flash-lite-preview", output_tokens * 1.50 + input_tokens * 0.25,
+        model == "gemini-3-flash-preview", output_tokens * 3.0 + input_tokens * 0.50,
+        model == "gemini-2.5-flash", output_tokens * 2.5 + input_tokens * 0.30,
+        model == "gemini-2.5-flash-lite", output_tokens * 0.4 + input_tokens * 0.10,
+        model == "gemini-2.0-flash", output_tokens * 0.4 + input_tokens * 0.10,
+        model == "gemini-2.0-flash-lite", output_tokens * 0.3 + input_tokens * 0.075,
+        default = NA
+    )
+]
+meta[, cost := cost / 1e6]
+
+# Summarize costs
+meta_sum <- meta[, list(
+    candidate_tokens = sum(candidates_token_count, na.rm = TRUE),
+    total_tokens = sum(total_token_count, na.rm = TRUE),
+    thought_tokens = sum(thoughts_token_count, na.rm = TRUE),
+    cost = sum(cost)
+), by = list(strategy, model, thinking, format)]
+meta_sum[model == "gemini-3.1-flash-lite-preview" & thinking == "thinking2000" & strategy == "zeroshot"]
+
+
+meta_sum_format = meta_sum
+meta_sum = meta_sum[format == "json"]
+
+# read and process predictions
+
 # Parse ground truth filenames
 gt[, image := stringi::stri_extract_first_regex(file, "NL-UtHUA_[A-Z0-9_]+")]
 gt[, row := 1:.N, by = image]
 
 # Merge predictions with ground truth
-print("Merging predictions with ground truth...")
 eval <- merge(preds, gt, by = c("image", "row"), suffixes = c("_pred", "_gt"), all.x = TRUE)
 
 # Field pattern for evaluation
 field_pattern <- "(volgnummer|title|initials|surname|maiden_name|street|house_number|class|tax)"
 
 # Standardize fields: trim whitespace, normalize initials
-print("Standardizing fields...")
 eval <- eval[, lapply(.SD, trimws),
     .SDcols = patterns(field_pattern),
-    by = list(image, model, strategy, thinking, row)
+    by = list(image, model, strategy, thinking, format, row)
 ]
 eval[, initials_gt := gsub(" ", "", initials_gt)]
 eval[, initials_pred := gsub(" ", "", initials_pred)]
@@ -116,7 +152,6 @@ eval[, initials_pred := gsub(" ", "", initials_pred)]
 eval[is.na(eval)] <- ""
 
 # Calculate character-level errors using Levenshtein distance
-print("Calculating error metrics...")
 eval[, char_errors := stringdist(volgnummer_pred, volgnummer_gt) +
     stringdist(title_pred, title_gt) +
     stringdist(initials_pred, initials_gt) +
@@ -146,15 +181,22 @@ eval[, cell_errors := (volgnummer_pred != volgnummer_gt) +
     (class_pred != class_gt) +
     (tax_pred != tax_gt)]
 
-eval_format = eval[md == "json"]
-eval = eval[md == "json"]
-
-# Summarize by model, strategy, and thinking budget
+# Summarize by model, strategy, thinking budget, and format
 smry <- eval[, list(
     cer = mean(char_errors / nchar_row),
     cell_error_rate = mean(cell_errors / 9),
     n_records = .N
-), by = list(model, strategy, thinking)]
+), by = list(model, strategy, thinking, format)]
+
+#
+smry_format = smry[format != "json"]
+smry = smry[format == "json"]
+
+smry_format = rbind(
+    smry_format,
+    smry[model %in% smry_format$model & strategy == "zeroshot"]
+)
+
 
 # Overall model performance
 print("\nOverall model performance (averaged across strategies):")
@@ -191,7 +233,7 @@ smry_long <- melt(
 )
 
 smry_long[, model_order := match(model, model_order)]
-smry_long <- smry_long[order(model_order)]
+smry_long = smry_long[order(model_order)]
 smry_long[, short_model := short_models[model]]
 
 # Plot: Error rates by strategy and thinking
@@ -210,30 +252,6 @@ plt(error_rate ~ model_order | strategy + thinking,
 )
 dev.off()
 
-# Add cost calculations
-meta[is.na(thoughts_token_count), thoughts_token_count := 0]
-meta[, output_tokens := candidates_token_count + thoughts_token_count]
-meta[, input_tokens := prompt_token_count]
-
-# Cost per million tokens (as of pricing date)
-meta[, cost := fcase(
-        model == "gemini-3.1-flash-lite-preview", output_tokens * 1.50 + input_tokens * 0.25,
-        model == "gemini-3-flash-preview", output_tokens * 3.0 + input_tokens * 0.50,
-        model == "gemini-2.5-flash", output_tokens * 2.5 + input_tokens * 0.30,
-        model == "gemini-2.5-flash-lite", output_tokens * 0.4 + input_tokens * 0.10,
-        model == "gemini-2.0-flash", output_tokens * 0.4 + input_tokens * 0.10,
-        model == "gemini-2.0-flash-lite", output_tokens * 0.3 + input_tokens * 0.075,
-        default = NA
-    )
-]
-meta[, cost := cost / 1e6]
-
-# Summarize costs
-meta_sum <- meta[, list(
-    total_tokens = sum(total_token_count, na.rm = TRUE),
-    thought_tokens = sum(thoughts_token_count, na.rm = TRUE),
-    cost = sum(cost)
-), by = list(strategy, model, thinking)]
 
 # Merge cost data with error metrics
 smry_long <- merge(
@@ -287,7 +305,30 @@ plt(error_rate ~ cost | strategy,
 )
 dev.off()
 
+# accuracy by format
+toplot = smry_format[order(format, -model, -thinking)]
+toplot[, model_order := 1:.N, by = format]
+toplot[, model_thinking := paste0(model, "\n", thinking)]
+model_thinking = unique(toplot$model_thinking)
+
+pdf(file = "./evaluation/figures/cer_by_format.pdf", height = 7, width = 7)
+plt(model_order ~ cer | format, data = toplot,
+    type = "b", pch = 20,
+    yaxl = function(x) model_thinking,
+    yaxb = 1:length(model_thinking),
+    xlab = "Error Rate",
+    ylab = "",
+    legend = "bottomright",
+    theme = tinytheme(las = 1, mar = c(4, 13, 2, 1), bty = "l")
+)
+dev.off()
+
+out = meta[model %in% preds[format == "md", model] & strategy == "zeroshot",
+    list(mean(prompt_token_count), mean(candidates_token_count)), by = format]
+out[, V3 / max(V3)]
+
+knitr::kable(out)
+
 cat("\n---------------------------\n")
-print("Evaluation complete!")
-print("Figures saved to: ./figures/")
+print("Done!")
 cat("\n---------------------------\n")
