@@ -1,12 +1,5 @@
-# Utrecht 1899 VLM Experiments - Evaluation Script
-#
-# This script evaluates the performance of different Gemini models on extracting
-# structured data from historical handwritten tax records.
-#
-# Metrics:
-# - Character Error Rate (CER)
-# - Cell Error Rate
-# - Cost analysis
+# Evaluates the performance and cost of gemini and gemma models on extracting # structured
+# data from historical handwritten tax records.
 
 setwd("~/repos/nocr-experiments")
 
@@ -50,10 +43,14 @@ pred_files <- list.files("./results/predictions", pattern = "\\.json$", full.nam
 names(pred_files) <- basename(pred_files)
 
 preds <- lapply(pred_files, fromJSON)
+nested = sapply(preds, length) == 1
+preds[nested] = lapply(preds[nested], \(x) x[[1]])
 preds <- lapply(preds, as.data.table)
 preds <- lapply(preds, setnames, "maiden name", "maiden_name", skip_absent = TRUE)
-preds <- rbindlist(preds, idcol = "file")
-
+preds <- lapply(preds, setnames, "initial", "initials", skip_absent = TRUE)
+preds <- lapply(preds, setnames, "initial_name", "initials", skip_absent = TRUE)
+# so you can't really read in the new ones because some of them are
+preds <- rbindlist(preds, idcol = "file", fill = TRUE)
 
 # Import predictions along format
 preds_format = fread("./results/predictions_format/processed_predictions_format.csv")
@@ -75,63 +72,67 @@ meta <- rbindlist(meta, idcol = "file", fill = TRUE)
 names(preds) == names(preds_format)
 preds = rbind(preds, preds_format)
 
+
+img_regex = "NL-UtHUA_[A-Z0-9_]+_[lr]"
+mdl_regex = "gem(ini|ma)-[^_]+"
+
 # Parse prediction filenames (new format: {image}__{model}__{strategy}__{thinking}.json)
-preds[, image := stringi::stri_extract_first_regex(file, "NL-UtHUA_[A-Z0-9_]+")]
-preds[, model := stringi::stri_extract_first_regex(file, "gemini-[^_]+")]
+preds[, image := stringi::stri_extract_first_regex(file, img_regex)]
+preds[, model := stringi::stri_extract_first_regex(file, mdl_regex)]
 preds[, strategy := stringi::stri_extract_first_regex(file, "(zeroshot|fewshot)")]
 preds[, thinking := stringi::stri_extract_first_regex(file, "thinking\\d+")]
 preds[, format := stringi::stri_extract_first_regex(file, "(yaml|md)")]
 preds[is.na(format), format := "json"]
 
+preds[, .N, by = model]
+
 # Add row numbers for proper alignment
 preds[, row := 1:.N, by = list(model, strategy, thinking, image, format)]
 
 # Parse metadata filenames
-print("Parsing metadata...")
-meta[, image := stringi::stri_extract_first_regex(file, "NL-UtHUA_[A-Z0-9_]+")]
-meta[, model := stringi::stri_extract_first_regex(file, "gemini-[^_]+")]
+meta[, image := stringi::stri_extract_first_regex(file, img_regex)]
+meta[, model := stringi::stri_extract_first_regex(file, mdl_regex)]
 meta[, strategy := stringi::stri_extract_first_regex(file, "(zeroshot|fewshot)")]
 meta[, thinking := stringi::stri_extract_first_regex(file, "thinking\\d+")]
 
-# extra formats from yaml/md
+# extra formats yaml/md
 meta[, format := stringi::stri_extract_first_regex(file, "(yaml|md)")]
 meta[is.na(format), format := "json"]
 
-# Add cost calculations
+# Add cost calculations, price per scan, input/output prices
 meta[is.na(thoughts_token_count), thoughts_token_count := 0]
 meta[, output_tokens := candidates_token_count + thoughts_token_count]
 meta[, input_tokens := prompt_token_count]
 
-# Cost per million tokens (as of pricing date)
 meta[, cost := fcase(
+        model == "gemma-4-26b-a4b-it",            output_tokens * 0.33 + input_tokens * 0.06, # or free
+        model == "gemma-4-31b-it",                output_tokens * 0.35 + input_tokens * 0.12, # or free
         model == "gemini-3.1-flash-lite-preview", output_tokens * 1.50 + input_tokens * 0.25,
-        model == "gemini-3-flash-preview", output_tokens * 3.0 + input_tokens * 0.50,
-        model == "gemini-2.5-flash", output_tokens * 2.5 + input_tokens * 0.30,
-        model == "gemini-2.5-flash-lite", output_tokens * 0.4 + input_tokens * 0.10,
-        model == "gemini-2.0-flash", output_tokens * 0.4 + input_tokens * 0.10,
-        model == "gemini-2.0-flash-lite", output_tokens * 0.3 + input_tokens * 0.075,
+        model == "gemini-3-flash-preview",        output_tokens * 3.00 + input_tokens * 0.50,
+        model == "gemini-2.5-flash",              output_tokens * 2.50 + input_tokens * 0.30,
+        model == "gemini-2.5-flash-lite",         output_tokens * 0.40 + input_tokens * 0.10,
+        model == "gemini-2.0-flash",              output_tokens * 0.40 + input_tokens * 0.10,
+        model == "gemini-2.0-flash-lite",         output_tokens * 0.30 + input_tokens * 0.075,
         default = NA
     )
 ]
 meta[, cost := cost / 1e6]
 
 # Summarize costs
-meta_sum <- meta[, list(
-    candidate_tokens = sum(candidates_token_count, na.rm = TRUE),
-    total_tokens = sum(total_token_count, na.rm = TRUE),
-    thought_tokens = sum(thoughts_token_count, na.rm = TRUE),
-    cost = sum(cost)
-), by = list(strategy, model, thinking, format)]
-meta_sum[model == "gemini-3.1-flash-lite-preview" & thinking == "thinking2000" & strategy == "zeroshot"]
+meta_sum <- meta[,
+    list(
+        candidate_tokens = sum(candidates_token_count, na.rm = TRUE),
+        total_tokens = sum(total_token_count, na.rm = TRUE),
+        thought_tokens = sum(thoughts_token_count, na.rm = TRUE),
+        cost = sum(cost)
+    ), by = list(strategy, model, thinking, format)]
 
 
 meta_sum_format = meta_sum
 meta_sum = meta_sum[format == "json"]
 
-# read and process predictions
-
 # Parse ground truth filenames
-gt[, image := stringi::stri_extract_first_regex(file, "NL-UtHUA_[A-Z0-9_]+")]
+gt[, image := stringi::stri_extract_first_regex(file, img_regex)]
 gt[, row := 1:.N, by = image]
 
 # Merge predictions with ground truth
@@ -152,7 +153,8 @@ eval[, initials_pred := gsub(" ", "", initials_pred)]
 eval[is.na(eval)] <- ""
 
 # Calculate character-level errors using Levenshtein distance
-eval[, char_errors := stringdist(volgnummer_pred, volgnummer_gt) +
+eval[, char_errors :=
+    stringdist(volgnummer_pred, volgnummer_gt) +
     stringdist(title_pred, title_gt) +
     stringdist(initials_pred, initials_gt) +
     stringdist(surname_pred, surname_gt) +
@@ -171,7 +173,8 @@ eval[, nchar_row := nchar(
 )]
 
 # Calculate cell-level errors (exact match required)
-eval[, cell_errors := (volgnummer_pred != volgnummer_gt) +
+eval[, cell_errors :=
+    (volgnummer_pred != volgnummer_gt) +
     (title_pred != title_gt) +
     (initials_pred != initials_gt) +
     (surname_pred != surname_gt) +
@@ -182,37 +185,44 @@ eval[, cell_errors := (volgnummer_pred != volgnummer_gt) +
     (tax_pred != tax_gt)]
 
 # Summarize by model, strategy, thinking budget, and format
-smry <- eval[, list(
-    cer = mean(char_errors / nchar_row),
-    cell_error_rate = mean(cell_errors / 9),
-    n_records = .N
-), by = list(model, strategy, thinking, format)]
+smry <- eval[,
+    list(
+        cer = mean(char_errors / nchar_row),
+        cell_error_rate = mean(cell_errors / 9),
+        n_records = .N),
+    by = list(model, strategy, thinking, format)]
 
-#
+smry <- eval[,
+    list(
+        cer = sum(char_errors) / sum(nchar_row),
+        cell_error_rate = sum(cell_errors / 9) / .N,
+        n_records = .N),
+    by = list(model, strategy, thinking, format)]
+
+# split summaries
 smry_format = smry[format != "json"]
-smry = smry[format == "json"]
+smry_open = smry[grepl("gemma", model)]
+smry = smry[format == "json" & !grepl("gemma", model)]
 
+# add other zeroshot back to format for comparison to json
 smry_format = rbind(
     smry_format,
     smry[model %in% smry_format$model & strategy == "zeroshot"]
 )
 
-
 # Overall model performance
 print("\nOverall model performance (averaged across strategies):")
 out = smry[, list(cer = mean(cer), cell_error_rate = mean(cell_error_rate)), by = model]
-
 knitr::kable(out[order(cer)], digits = 3)
-
 writeLines(
     knitr::kable(out[order(cer)], format = "latex", digits = 3),
     con = "./evaluation/tables/performance_by_strategy.tex"
 )
 
+
 # Top 5 configurations
 print("\nTop 5 configurations:")
 knitr::kable(smry[order(cer)][1:5, list(model, strategy, thinking, cer, cell_error_rate)], digits = 3)
-
 writeLines(
     knitr::kable(
         smry[order(cer)][1:5, list(model, strategy, thinking, cer, cell_error_rate)],
@@ -224,6 +234,7 @@ writeLines(
     con = "./evaluation/tables/top5_cer.tex"
 )
 
+
 # Reshape for plotting
 smry_long <- melt(
     smry,
@@ -231,6 +242,7 @@ smry_long <- melt(
     variable.name = "error_type",
     value.name = "error_rate"
 )
+
 
 smry_long[, model_order := match(model, model_order)]
 smry_long = smry_long[order(model_order)]
@@ -261,7 +273,8 @@ smry_long <- merge(
 )
 
 # Cost-accuracy frontier
-out = smry_long[error_type == "cer", list(cost, model, strategy, thinking, error_rate)][order(cost)]
+out = smry_long[error_type == "cer", list(model, strategy, thinking, cost, error_rate)][order(cost)]
+knitr::kable(out)
 writeLines(
     knitr::kable(
         out[error_rate < 0.1],
@@ -273,23 +286,43 @@ writeLines(
     con = "./evaluation/tables/cost_accuracy_tradeoffs.tex"
 )
 
-knitr::kable(out)
 
-setorder(smry_long, model, -cost)
+setorder(smry_long, model, cost)
+toplot = smry_long[error_type == "cer"]
+toplot[, strategy2 := 1:.N, by = list(model)]
 
 # Plot: Error rates by cost
-pdf(file = "./evaluation/figures/error_rates_by_cost_and_model.pdf", height = 6, width = 10)
+pdf(file = "./evaluation/figures/error_rates_by_cost_and_model.pdf", height = 6, width = 7)
 mypar()
 plt(error_rate ~ cost | short_model,
-    facet = ~ error_type,
-    data = smry_long,
+    # facet = ~ error_type,
+    data = toplot,
     legend = "top!",
     type = "b",
-    pch = 19,
+    pch = 20,
     xlab = "Cost (USD)",
     ylab = "Error Rate",
     main = NA
 )
+dev.off()
+
+# Pareto frontier: best achievable CER at or below each cost threshold
+toplot_pareto <- smry_long[error_type == "cer"]
+setorder(toplot_pareto, cost)
+toplot_pareto[, running_min_cer := cummin(error_rate)]
+
+pdf(file = "./evaluation/figures/error_rates_by_cost_and_model_pareto.pdf", height = 6, width = 7)
+mypar()
+plt(error_rate ~ cost | short_model,
+    data = toplot,
+    legend = "top!",
+    type = "p",
+    pch = 20,
+    xlab = "Cost (USD)",
+    ylab = "Error Rate (CER)",
+    main = NA
+)
+plt_add(running_min_cer ~ cost, data = toplot_pareto, type = "s")
 dev.off()
 
 pdf(file = "./evaluation/figures/error_rates_by_cost_and_strategyl.pdf", height = 6, width = 10)
@@ -305,14 +338,14 @@ plt(error_rate ~ cost | strategy,
 )
 dev.off()
 
-# accuracy by format
+# === accuracy by format ===
 toplot = smry_format[order(format, -model, -thinking)]
 toplot[, model_order := 1:.N, by = format]
 toplot[, model_thinking := paste0(model, "\n", thinking)]
 model_thinking = unique(toplot$model_thinking)
 
 pdf(file = "./evaluation/figures/cer_by_format.pdf", height = 7, width = 7)
-plt(model_order ~ cer | format, data = toplot,
+plt(model_order ~ cer | format, data = toplot[!is.na(cer)],
     type = "b", pch = 20,
     yaxl = function(x) model_thinking,
     yaxb = 1:length(model_thinking),
@@ -324,10 +357,28 @@ plt(model_order ~ cer | format, data = toplot,
 dev.off()
 
 out = meta[model %in% preds[format == "md", model] & strategy == "zeroshot",
-    list(mean(prompt_token_count), mean(candidates_token_count)), by = format]
-out[, V3 / max(V3)]
+    list(input = mean(prompt_token_count), output = mean(candidates_token_count)), by = format]
+out[, output_as_share_max := output / max(output)]
 
-knitr::kable(out)
+knitr::kable(out, digits = 2)
+
+# === Open models by size ===
+
+smry_open = smry_open[order(strategy, -model, -thinking)]
+smry_open[, parameters := stringi::stri_extract_first_regex(model, "\\d+[Bb]-")]
+smry_open[, parameters := as.integer(stringi::stri_extract_first_regex(parameters, "\\d+"))]
+setorder(smry_open, parameters)
+
+pdf(file = "./evaluation/figures/cer_by_size_open.pdf", height = 6, width = 7)
+plt(cer ~ parameters | strategy, data = smry_open,
+    log = "x",
+    type = "b", pch = 20,
+    xlab = "Parameters",
+    ylab = "CER",
+    legend = "topright",
+    theme = tinytheme(las = 1, mar = c(4, 13, 2, 1), bty = "l")
+)
+dev.off()
 
 cat("\n---------------------------\n")
 print("Done!")
